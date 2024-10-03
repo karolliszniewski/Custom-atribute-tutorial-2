@@ -250,3 +250,205 @@ This solution provides a flexible way to add video links to specific product opt
 
 
 
+
+
+
+Namespace and Use Statements:
+```php
+namespace Acme\ProductOptionVideo\Plugin\Catalog\Ui\DataProvider\Product\Form\Modifier;
+use Magento\Catalog\Ui\DataProvider\Product\Form\Modifier\Eav as Subject;
+use Magento\Ui\Component\Form\Element\Input;
+use Magento\Ui\Component\Form\Field;
+```
+
+This section defines the namespace of the class and imports necessary Magento classes. The class is extending Magento's core EAV (Entity-Attribute-Value) form modifier.
+
+```php
+Class Definition:
+
+phpCopyclass Eav
+{
+    // Methods will be here
+}
+```
+
+This defines our plugin class named Eav.
+
+The afterModifyMeta Method:
+
+```php
+public function afterModifyMeta(Subject $subject, array $meta)
+{
+    // Method body
+}
+```
+
+This is a plugin method that runs after Magento's core modifyMeta method. It allows us to modify the form metadata.
+Let's break down the method body:
+a. Getting attributes:
+
+```php
+$attributes = $subject->getAttributes();
+```
+
+This retrieves all attributes of the product.
+b. Looping through attributes:
+```php
+foreach ($attributes as $attribute) {
+    if ($attribute->getAttributeCode() == 'color') {
+        // Process color attribute
+    }
+}
+```
+
+This loops through all attributes, looking specifically for the 'color' attribute.
+c. Setting up attribute metadata:
+
+```php
+$attributeCode = $attribute->getAttributeCode();
+$groupCode = $subject->getGroupCodeByAttribute($attribute);
+$groupName = 'container_' . $attributeCode;
+```
+
+This prepares variables needed to locate and modify the correct part of the form.
+d. Checking if the attribute is used for configurable products:
+
+```php
+if (isset($meta[$groupCode]['children'][$groupName]['children'][$attributeCode]['arguments']['data']['config']['usedForConfigurableAttributes'])) {
+    // Process configurable attribute options
+}
+```
+This ensures we only modify the form for configurable attributes.
+e. Processing color options:
+```php
+$options = $attribute->getOptions();
+array_shift($options); // Remove the first option which is usually empty
+
+foreach ($options as $option) {
+    // Add video link field for each color option
+}
+```
+This gets all color options and adds a video link field for each one.
+f. Adding video link field:
+```php
+$optionId = $option->getValue();
+$meta[$groupCode]['children'][$groupName]['children'][$attributeCode . '_' . $optionId . '_video_link'] = [
+    'arguments' => [
+        'data' => [
+            'config' => [
+                'label' => __('Video Link for %1', $option->getLabel()),
+                'componentType' => Field::NAME,
+                'formElement' => Input::NAME,
+                'dataScope' => 'video_link.' . $optionId,
+                'dataType' => 'text',
+                'sortOrder' => 50,
+            ],
+        ],
+    ],
+];
+```
+This creates a new input field for each color option, labeled "Video Link for [Color]".
+The afterModifyData Method:
+
+```php
+public function afterModifyData(Subject $subject, array $data)
+{
+    foreach ($data as &$productData) {
+        if (isset($productData['product']['video_link'])) {
+            $videoLinks = json_decode($productData['product']['video_link'], true);
+            if (is_array($videoLinks)) {
+                $productData['product']['video_link'] = $videoLinks;
+            }
+        }
+    }
+    return $data;
+}
+```
+This method runs after Magento's core modifyData method. It decodes the JSON-stored video links into an array when loading product data.
+Tutorial: Adding Custom Fields to Product Edit Form in Magento 2
+In this tutorial, we'll learn how to add custom fields to the product edit form in Magento 2 admin panel. We'll focus on adding video link fields for each color option of a configurable product.
+Step 1: Create the Plugin Class
+Create a new PHP file named Eav.php in your module's Plugin/Catalog/Ui/DataProvider/Product/Form/Modifier/ directory.
+Step 2: Define the Class Structure
+```php
+namespace Acme\ProductOptionVideo\Plugin\Catalog\Ui\DataProvider\Product\Form\Modifier;
+
+use Magento\Catalog\Ui\DataProvider\Product\Form\Modifier\Eav as Subject;
+use Magento\Ui\Component\Form\Element\Input;
+use Magento\Ui\Component\Form\Field;
+
+class Eav
+{
+    public function afterModifyMeta(Subject $subject, array $meta)
+    {
+        // We'll add code here
+    }
+
+    public function afterModifyData(Subject $subject, array $data)
+    {
+        // We'll add code here
+    }
+}
+```
+Step 3: Implement the afterModifyMeta Method
+This method will add our custom fields to the form:
+```php
+public function afterModifyMeta(Subject $subject, array $meta)
+{
+    $attributes = $subject->getAttributes();
+    foreach ($attributes as $attribute) {
+        if ($attribute->getAttributeCode() == 'color') {
+            $attributeCode = $attribute->getAttributeCode();
+            $groupCode = $subject->getGroupCodeByAttribute($attribute);
+            $groupName = 'container_' . $attributeCode;
+
+            if (isset($meta[$groupCode]['children'][$groupName]['children'][$attributeCode]['arguments']['data']['config']['usedForConfigurableAttributes'])) {
+                $options = $attribute->getOptions();
+                array_shift($options); // Remove the first option which is usually empty
+
+                foreach ($options as $option) {
+                    $optionId = $option->getValue();
+                    $meta[$groupCode]['children'][$groupName]['children'][$attributeCode . '_' . $optionId . '_video_link'] = [
+                        'arguments' => [
+                            'data' => [
+                                'config' => [
+                                    'label' => __('Video Link for %1', $option->getLabel()),
+                                    'componentType' => Field::NAME,
+                                    'formElement' => Input::NAME,
+                                    'dataScope' => 'video_link.' . $optionId,
+                                    'dataType' => 'text',
+                                    'sortOrder' => 50,
+                                ],
+                            ],
+                        ],
+                    ];
+                }
+            }
+        }
+    }
+
+    return $meta;
+}
+```
+Step 4: Implement the afterModifyData Method
+This method will handle loading the saved video link data:
+```php
+public function afterModifyData(Subject $subject, array $data)
+{
+    foreach ($data as &$productData) {
+        if (isset($productData['product']['video_link'])) {
+            $videoLinks = json_decode($productData['product']['video_link'], true);
+            if (is_array($videoLinks)) {
+                $productData['product']['video_link'] = $videoLinks;
+            }
+        }
+    }
+    return $data;
+}
+```
+That's it! This plugin will now add a "Video Link" field for each color option of configurable products in the admin product edit form. The video links will be stored as a JSON string in the database and loaded as an array when editing the product.
+Remember to clear your cache and compile after adding this file to see the changes in the admin panel.
+
+
+
+
